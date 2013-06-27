@@ -11,28 +11,43 @@
     %meta{content: "width=device-width, initial-scale=1.0", name: "viewport"}
     %title= data.page.title
     / Included CSS Files
-    = stylesheet_link_tag "app", "theme", "ghfm"
+    = stylesheet_link_tag "app", "theme", "ghfm", "fonts"
     = javascript_include_tag "foundation/modernizr.foundation"
     %link{rel: "alternate", type: "application/rss+xml", title: "RSS Feed", href: "feed.xml"}
   %body{class: page_classes}
-    .row
-      .twelve.columns
-        %h2
-          %a{href: "/"}= data.site.title
-        %hr
-    .row
+    .top-bar
+      %div.row
+        %ul.title-area
+          %li.name
+            %h1
+              %a{href: "/"} Justin Leveck
+        %section.top-bar-section
+          <!--Right Nav Section -->
+          %ul.right
+            %li
+              %a{href: "/"} Blog
+            %li
+              = link_to 'About', '/about.html'
+
+
+    .row.wrapper
       .eight.columns
         = yield
       / Application Javascript, safe to override
       = javascript_include_tag "app"
       %aside.four.columns
-        .panel
-          - if paginate
-            %p
-              Page
-              = page_number
-              of
-              = num_pages
+        .panel.avatar
+          = image_tag 'http://www.gravatar.com/avatar/f170caf69a98078819d91ddf2f17f2f9.jpg?s=64'
+          %span.bio
+            Ruby developer. Entrepreneur.
+        - if request.path == "index.html"
+          .panel
+            - if paginate
+              %p
+                Page
+                = page_number
+                of
+                = num_pages
         %dl.tabs
           %dd.active
             %a{href: "#recent"} Recent Articles
@@ -46,7 +61,7 @@
                 %li
                   %a{href: "#{article.url}"}
                     = article.title
-                  %span= article.date.strftime('%b %e')
+                  -#%span= article.date.strftime('%b %e')
           %li#tagsTab
             %h4 Tags
             %ul.disc
@@ -54,3 +69,10 @@
                 %li
                   %a{href: "#{tag_path tag}"}
                     = "#{tag} (#{articles.size})"
+  %div#copyright
+    %div.row.full-width
+      %div.large-4.columns
+        %p Site content © 2013 Justin Leveck
+      %div.large-8.columns
+        %ul.inline-list.right
+          %li

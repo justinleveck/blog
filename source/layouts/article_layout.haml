@@ -1,4 +1,6 @@
 - wrap_layout :layout do
-  %h2= current_page.data.title
+  %h2.post-title= current_page.data.title
+  %p.meta
+    %span= current_page.date.strftime('%b %d, %Y')
   %article
     = yield

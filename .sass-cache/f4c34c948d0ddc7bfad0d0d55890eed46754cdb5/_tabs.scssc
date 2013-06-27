@@ -1,0 +1,768 @@
+<?php
+/**
+ * @package gantry
+ * @subpackage admin.ajax-models
+ * @version        3.1.18 October 30, 2011
+ * @author        RocketTheme http://www.rockettheme.com
+ * @copyright     Copyright (C) 2007 - 2011 RocketTheme, LLC
+ * @license        http://www.gnu.org/licenses/gpl-2.0.html GNU/GPLv2 only
+ *
+ * Gantry uses the Joomla Framework (http://www.joomla.org), a GNU/GPLv2 content management system
+ *
+ */
+defined('JPATH_BASE') or die();
+
+error_reporting(0);
+
+global
+$gantry;
+
+jimport('joomla.filesystem.file');
+jimport('joomla.filesystem.folder');
+jimport('joomla.filesystem.archive');
+
+$archive_files = array();
+$ssp = ini_get('session.save_path');
+$std = trim(sys_get_temp_dir());
+$jtp = JPATH_SITE . DS . 'tmp';
+
+// Try to find a writable directory
+$dir = false;
+$dir = ($dir===false && is_writable($jtp)) ? $jtp : $dir;
+$dir = ($dir===false && is_writable($std)) ? $std : $dir;
+$dir = ($dir===false && is_writable($ssp)) ? $ssp : $dir;
+$dir = ($dir===false && is_writable('/tmp')) ? '/tmp' : $dir;
+
+$zipfilename = $dir . DS . "gantry-diagnostics.tgz";
+
+$joomlaConfigFileName = $dir . DS . "gantry-diagnostics" . DS . "joomla_config.txt";
+JFile::write($joomlaConfigFileName, gantryDiagJoomlaConfig());
+$archive_files[] = $joomlaConfigFileName;
+
+$dirsFileName = $dir . DS . "gantry-diagnostics" . DS . "directories.txt";
+JFile::write($dirsFileName, gantryDiagWritableDirectories());
+$archive_files[] = $dirsFileName;
+
+$phpInfoFileName = $dir . DS . "gantry-diagnostics" . DS . "phpinfo.html";
+JFile::write($phpInfoFileName, gantryDiagPHPInfo());
+$archive_files[] = $phpInfoFileName;
+
+$phpSettingsFileName = $dir . DS . "gantry-diagnostics" . DS . "phpsettings.txt";
+JFile::write($phpSettingsFileName, gantryDiagPHPSettings());
+$archive_files[] = $phpSettingsFileName;
+
+$gantryObjectsFileName = $dir . DS . "gantry-diagnostics" . DS . "gantryObjects.html";
+JFile::write($gantryObjectsFileName, gantryDiagGantryObjects());
+$archive_files[] = $gantryObjectsFileName;
+
+$templateParamsFile = $dir . DS . "gantry-diagnostics" . DS . "params.ini";
+JFile::copy($gantry->templatePath.DS."params.ini", $templateParamsFile);
+$archive_files[] = $templateParamsFile;
+
+JArchive::create($zipfilename, $archive_files, "gz", "", $dir);
+
+$fullPath = $zipfilename;
+
+if ($fd = fopen ($fullPath, "r")) {
+    $fsize = filesize($fullPath);
+    $path_parts = pathinfo($fullPath);
+    $ext = strtolower($path_parts["extension"]);
+    switch ($ext) {
+        case "pdf":
+        header("Content-type: application/pdf"); // add here more headers for diff. extensions
+        header("Content-Disposition: attachment; filename=\"".$path_parts["basename"]."\""); // use 'attachment' to force a download
+        break;
+        default;
+        header("Content-type: application/octet-stream");
+        header("Content-Disposition: filename=\"".$path_parts["basename"]."\"");
+    }
+    header("Content-length: $fsize");
+    header("Cache-control: private"); //use this to open files directly
+    while(!feof($fd)) {
+        $buffer = fread($fd, 2048);
+        echo $buffer;
+    }
+}
+fclose ($fd);
+
+JFile::delete($zipfilename);
+JFolder::delete($dir . DS . "gantry-diagnostics");
+exit;
+
+
+
+
+function gantryDiagGantryObjects(){
+    $ret  = "<html><head><title>Gantry Objects</title></head><body>";
+    global $gantry;
+    $gantry->_templateDetails->xml = "CLEARED FOR OUTPUT";
+    ob_start();
+    var_dump($gantry);
+    $ret.= ob_get_contents();
+    ob_end_clean();
+    $ret .= "</body></html>";
+    return $ret;
+}
+
+function gantryDiagPHPSettings() {
+    $db =& JFactory::getDBO();
+    $infop = array();
+    $infop[] = JText::_('Safe Mode') . " - " . HTML_admin_misc::get_php_setting('safe_mode');
+    $infop[] = JText::_('Open basedir') . " - " . (($ob = ini_get('open_basedir')) ? $ob : JText::_('none'));
+    $infop[] = JText::_('Display Errors') . " - " . HTML_admin_misc::get_php_setting('display_errors');
+    $infop[] = JText::_('Short Open Tags') . " - " . HTML_admin_misc::get_php_setting('short_open_tag');
+    $infop[] = JText::_('File Uploads') . " - " . HTML_admin_misc::get_php_setting('file_uploads');
+    $infop[] = JText::_('Magic Quotes') . " - " . HTML_admin_misc::get_php_setting('magic_quotes_gpc');
+    $infop[] = JText::_('Register Globals') . " - " . HTML_admin_misc::get_php_setting('register_globals');
+    $infop[] = JText::_('Output Buffering') . " - " . HTML_admin_misc::get_php_setting('output_buffering');
+    $infop[] = JText::_('Session Save Path') . " - " . (($sp = ini_get('session.save_path')) ? $sp : JText::_('none'));
+    $infop[] = JText::_('Session Auto Start') . " - " . intval(ini_get('session.auto_start'));
+    $infop[] = JText::_('XML Enabled') . " - " . (extension_loaded('xml') ? JText::_('Yes') : JText::_('No'));
+    $infop[] = JText::_('Zlib Enabled') . " - " . (extension_loaded('zlib') ? JText::_('Yes') : JText::_('No'));
+    $infop[] = JText::_('Disabled Functions') . " - " . (($df = ini_get('disable_functions')) ? $df : JText::_('none'));
+    $infop[] = JText::_('Mbstring Enabled') . " - " . (extension_loaded('mbstring') ? JText::_('Yes') : JText::_('No'));
+    $infop[] = JText::_('Iconv Available') . " - " . (function_exists('iconv') ? JText::_('Yes') : JText::_('No'));
+    $query = 'SELECT name FROM #__plugins' . ' WHERE folder="editors" AND published="1"';
+    $db->setQuery($query, 0, 1);
+    $editor = $db->loadResult();
+    $infop[] = JText::_('WYSIWYG Editor') . " - " . $editor;
+    return implode("\n", $infop);
+}
+
+function gantryDiagPHPInfo() {
+    ob_start();
+    phpinfo(INFO_GENERAL | INFO_CONFIGURATION | INFO_MODULES);
+    $phpinfo = ob_get_contents();
+    ob_end_clean();
+    return $phpinfo;
+}
+
+function gantryDiagJoomlaConfig() {
+    $cf = file(JPATH_CONFIGURATION . '/configuration.php');
+    $config_output = array();
+    foreach ($cf as $k => $v) {
+        if (preg_match('#var \$host#i', $v)) {
+            $cf[$k] = 'var $host = \'xxxxxx\'';
+        } else if (preg_match('#var \$user#i', $v)) {
+            $cf[$k] = 'var $user = \'xxxxxx\'';
+        } else if (preg_match('#var \$password#i', $v)) {
+            $cf[$k] = 'var $password = \'xxxxxx\'';
+        } else if (preg_match('#var \$db#i', $v)) {
+            $cf[$k] = 'var $db = \'xxxxxx\'';
+        } else if (preg_match('#var \$ftp_user#i', $v)) {
+            $cf[$k] = 'var $ftp_user = \'xxxxxx\'';
+        } else if (preg_match('#var \$ftp_pass#i', $v)) {
+            $cf[$k] = 'var $ftp_pass = \'xxxxxx\'';
+        } else if (preg_match('#var \$smtpuser#i', $v)) {
+            $cf[$k] = 'var $smtpuser = \'xxxxxx\'';
+        } else if (preg_match('#var \$smtppass#i', $v)) {
+            $cf[$k] = 'var $smtppass = \'xxxxxx\'';
+        } else if (preg_match('#<\?php#i', $v)) {
+            $cf[$k] = '';
+        } else if (preg_match('#\?>#i', $v)) {
+            $cf[$k] = '';
+        } else if (preg_match('#\}#i', $v)) {
+            $cf[$k] = '';
+        } else if (preg_match('#class JConfig \{#i', $v)) {
+            $cf[$k] = '';
+        }
+        $cf[$k] = str_replace('var ', '', $cf[$k]);
+        $cf[$k] = str_replace(';', '', $cf[$k]);
+        //$cf[$k]        = str_replace(' = ','</td><td>',$cf[$k]);
+        //$cf[$k]        = '<td>'. $cf[$k] .'</td>';
+        if ($cf[$k] != '') {
+            $config_output[] = trim($cf[$k]);
+        }
+    }
+    return implode("\n", $config_output);
+}
+
+
+function gantryDiagWritableDirectories() {
+    global $gantry;
+    jimport('joomla.filesystem.folder');
+    $cparams = JComponentHelper::getParams('com_media');
+    $config =& JFactory::getConfig();
+    $dirs = array();
+    $dirs[] = "---------------- Gantry Directories -----------------";
+    $dirs[] = _getDirInfo($gantry->templatePath, 0, "Template Path ");
+    $dirs[] = _getDirInfo($gantry->basePath . DS . 'administrator/templates/system/', 0, "Admin System Template ");
+    $dirs[] = _getDirInfo($gantry->basePath . DS . 'administrator/templates/system/gantry-ajax-admin.php', 0, "Admin Ajax File ");
+    $dirs[] = _getDirInfo($gantry->custom_dir, 0, "Custom directory ");
+    $dirs[] = _getDirInfo($gantry->custom_presets_file, 0, "Custom Presets File ");
+    $dirs[] = _getDirInfo($gantry->custom_menuitemparams_dir, 0, "Custom Menuitems directory ");
+    $dirs[] = _getDirInfo($gantry->templatePath . DS . 'gantry-ajax.php', 0, "Frontside Ajax File ");
+
+    $custom_mipresets = JFolder::folders($gantry->custom_menuitemparams_dir);
+    foreach ($custom_mipresets as $custom_mipreset)
+    {
+        $dirs[] = _getDirInfo($gantry->custom_menuitemparams_dir . DS . $custom_mipreset, 0);
+    }
+
+    $dirs[] = "\n---------------- Joomla Directories -----------------";
+    $dirs[] = _getDirInfo('administrator/backups');
+    $dirs[] = _getDirInfo('administrator/components');
+    $dirs[] = _getDirInfo('administrator/language');
+    // List all admin languages
+    $admin_langs = JFolder::folders(JPATH_ADMINISTRATOR . DS . 'language');
+    foreach ($admin_langs as $alang)
+    {
+        $dirs[] = _getDirInfo('administrator/language/' . $alang);
+    }
+    $dirs[] = _getDirInfo('administrator/modules');
+    $dirs[] = _getDirInfo('administrator/templates');
+    $dirs[] = _getDirInfo('components');
+    $dirs[] = _getDirInfo('images');
+    $dirs[] = _getDirInfo('images/banners');
+    $dirs[] = _getDirInfo($cparams->get('image_path'));
+    $dirs[] = _getDirInfo('language');
+    // List all site languages
+    $site_langs = JFolder::folders(JPATH_SITE . DS . 'language');
+    foreach ($site_langs as $slang)
+    {
+        $dirs[] = _getDirInfo('language/' . $slang);
+    }
+    $dirs[] = _getDirInfo('media');
+    $dirs[] = _getDirInfo('modules');
+    $dirs[] = _getDirInfo('plugins');
+    $dirs[] = _getDirInfo('plugins/content');
+    $dirs[] = _getDirInfo('plugins/editors');
+    $dirs[] = _getDirInfo('plugins/editors-xtd');
+    $dirs[] = _getDirInfo('plugins/search');
+    $dirs[] = _getDirInfo('plugins/system');
+    $dirs[] = _getDirInfo('plugins/user');
+    $dirs[] = _getDirInfo('plugins/xmlrpc');
+    $dirs[] = _getDirInfo('templates');
+    $dirs[] = _getDirInfo(JPATH_SITE . DS . 'cache', 0, JText::_('Cache Directory') . " ");
+    $dirs[] = _getDirInfo(JPATH_ADMINISTRATOR . DS . 'cache', 0, JText::_('Cache Directory') . " ");
+    $dirs[] = _getDirInfo($config->getValue('config.log_path', JPATH_ROOT . DS . 'log'), 0, JText::_('Log Directory') .
+            ' ($log_path) ');
+    $dirs[] = _getDirInfo($config->getValue('config.tmp_path', JPATH_ROOT . DS . 'tmp'), 0, JText::_('Temp Directory') . ' ($tmp_path) ');
+    return implode("\n", $dirs);
+}
+
+function _getDirInfo($folder, $relative = 1, $text = '') {
+    jimport('joomla.filesystem.path');
+
+    $ret = "";
+
+    $writeable = 'Writable';
+    $unwriteable = 'Unwritable';
+
+    $ret .= $text;
+
+
+    if ($relative) {
+        $path = "../$folder";
+    } else {
+        $path = $folder;
+    }
+
+    $ret .= $path;
+    if (is_dir($path)) {
+        $ret .= '/';
+    }
+
+
+    if (file_exists($path)) {
+        $ret .= " - ";
+        $ret .= is_writable($path) ? $writeable : $unwriteable;
+        $ret .= " - Owner: ";
+        $ret .= (JPath::isOwner($path)) ? "Yes" : "No";
+        $ret .= " - Permissions: " . JPath::getPermissions($path);
+    }
+    else {
+        $ret .= " - Does Not Exist";
+    }
+    return $ret;
+}
+                                                        û¨!Ök3º”$7A_Å7P©F@J/ÅQ&Ω*‚±©èï”ˆ(Ô‚º2åQ7Ì—o’Ê≠ø#ŒÕ]◊;ov‡–Íå¿é?∫'‡÷ ¡˝û¡O˜kñ/Ìƒß≥ÉñG¨kØô∑yá:æôXÈ±+È¿61bm≈N‡ó9ó]Øé–]≥¸6›$Oô{#Í˝·˙O±íòˆh)ƒº}43.˝Ém•vç”Aıõï˚2÷lƒÍ¯-e5≈£@⁄2™ä|ˇMbz—‡&lÍ#çÁ?±á..ˆGqæÛM¶N9c^f„v®Ò{≠®6wÛË◊Ô‚{ªdÜ¡∆ì8ÇõñIÀê\	U’°◊;–ïú/0»QM!äF≈3–_÷≠,4èâ¶ì±'2ﬂ¶Œw‚ÄY∞£zÖJc˙oOs—G|≤>œÀ–\@æJ0cÈõ∑zHıÙ¥kR?àq?}ÿp∫Èî◊Ç\^≥&ææÿì„~∑^0S}a-.7˜‡áæ+„Ç‘âû)ˇRiÕ?ì@mßÕüVÂ`µjÊj"¸Hû—$gzR“∫ˆ¡~ÒöY{˛Yô,`j∆@U⁄‹*ÿV√k∂m;K‚ÿ∆3⁄@µﬂ÷.Ñ7˝V'i∫Óåíø?ñ…ˇ•ë˘zXf¶ãöY ‰p‡›N¶|V§nÜ•%Rûê≥ÃﬁÕÍ∑6kE)\ÓQwGEÒDwF“ı„H7]†òS•±∑N:ÈàÂr∞‡xtyü< ¿©,„t∂\_ßícwv∑¶Öéã@Ú˘¿ﬂÿ‰t¡òí'ﬁ-mz´È±£AÄÍ»v∑9ß≤aœµ*‡ﬁ‘7â'ÈÖé⁄É°[J≠:Ë”µ“UÚaÑl_8ºÁ˘
+„#íV°`‘JÚYh≥Œ"	ÌT1Âêe•ëŸÎÙ0†°ÅπÖ+!‚%P'{ÜÀ⁄b#`Tı¡CäyáaÊ¨ô{	éıË‹ª£‘ƒôúñõÀø ?ùH—JÀ!ZÒ¬Üfÿ£j~ª„…]⁄ˇ7≠óØ:ósµ‹ÙÈVË8¢ˇ,m3•oÓøi&`≤≥•~Sòﬂ‰F¶ı≠˘â◊qm°çëL_™ßÿx±ˆ[ê»Ábº®íFû∆êe6'<VˆªnÆ4·±0Ëi<X‘ƒ	I‘Q’ä–e_3À¶â3úÆnˆQp	ß2es⁄aæÎâh@∂|:’\@™Q Ω@ïxï·âêüCk¢MÆ{&àR4:q⁄j-uû$ª+˙)<H–À≈|º§∂ép—5√∂Ò¥èGmMÂtr∆∫∆/zÅ2Ö{Æïüà?¢õB∞-˙ÚŒÛàHM¥WéÙYQ÷È—5ƒf_W/$ﬂµ\˙<?php
+/**
+ * @version		$Id: mail.php 14401 2010-01-26 14:10:00Z louis $
+ * @package		Joomla.Framework
+ * @subpackage	Mail
+ * @copyright	Copyright (C) 2005 - 2010 Open Source Matters. All rights reserved.
+ * @license		GNU/GPL, see LICENSE.php
+ * Joomla! is free software. This version may have been modified pursuant
+ * to the GNU General Public License, and as distributed it includes or
+ * is derivative of works licensed under the GNU General Public License or
+ * other free or open source software licenses.
+ * See COPYRIGHT.php for copyright notices and details.
+ */
+
+// Check to ensure this file is within the rest of the framework
+defined('JPATH_BASE') or die();
+
+jimport('phpmailer.phpmailer');
+jimport('joomla.mail.helper');
+
+/**
+ * E-Mail Class.  Provides a common interface to send e-mail from the Joomla! Framework
+ *
+ * @package 	Joomla.Framework
+ * @subpackage		Mail
+ * @since		1.5
+ */
+class JMail extends PHPMailer
+{
+
+	/**
+	 * Constructor
+	 *
+	 */
+	function JMail()
+	{
+		 // phpmailer has an issue using the relative path for it's language files
+		 $this->SetLanguage('joomla', JPATH_LIBRARIES.DS.'phpmailer'.DS.'language'.DS);
+	}
+
+	/**
+	 * Returns a reference to a global e-mail object, only creating it
+	 * if it doesn't already exist.
+	 *
+	 * This method must be invoked as:
+	 * 		<pre>  $mail =& JMail::getInstance();</pre>
+	 *
+	 * NOTE: If you need an instance to use that does not have the global configuration
+	 * values, use an id string that is not 'Joomla'.
+	 *
+	 * @static
+	 * @access public
+	 * @param string $id The id string for the JMail instance [optional]
+	 * @return object The global JMail object
+	 * @since 1.5
+	 */
+	function & getInstance($id = 'Joomla')
+	{
+		static $instances;
+
+		if (!isset ($instances)) {
+			$instances = array ();
+		}
+
+		if (empty ($instances[$id])) {
+			$instances[$id] = new JMail();
+		}
+
+		return $instances[$id];
+	}
+
+	/**
+	 * @return mixed True if successful, a JError object otherwise
+	 */
+	function &Send()
+	{
+		if ( ( $this->Mailer == 'mail' ) && ! function_exists('mail') )
+		{
+			return JError::raiseNotice( 500, JText::_('MAIL_FUNCTION_DISABLED') );
+		}
+
+		@ $result = parent::Send();
+
+		if ($result == false)
+		{
+			// TODO: Set an appropriate error number
+			$result =& JError::raiseNotice( 500, JText::_($this->ErrorInfo) );
+		}
+		return $result;
+	}
+
+	/**
+	 * Set the E-Mail sender
+	 *
+	 * @access public
+	 * @param array $from E-Mail address and Name of sender
+	 * 		<pre>
+	 * 			array( [0] => E-Mail Address [1] => Name )
+	 * 		</pre>
+	 * @return void
+	 * @since 1.5
+	 */
+	function setSender($from)
+	{
+		// If $from is an array we assume it has an address and a name
+		if (is_array($from))
+		{
+			$this->From 	= JMailHelper::cleanLine( $from[0] );
+			$this->FromName = JMailHelper::cleanLine( $from[1] );
+		// If it is a string we assume it is just the address
+		} elseif (is_string($from)) {
+			$this->From = JMailHelper::cleanLine( $from );
+		// If it is neither, we throw a warning
+		} else {
+			JError::raiseWarning( 0, "JMail::  Invalid E-Mail Sender: $from", "JMail::setSender($from)");
+		}
+	}
+
+	/**
+	 * Set the E-Mail subject
+	 *
+	 * @access public
+	 * @param string $subject Subject of the e-mail
+	 * @return void
+	 * @since 1.5
+	 */
+	function setSubject($subject) {
+		$this->Subject = JMailHelper::cleanLine( $subject );
+	}
+
+	/**
+	 * Set the E-Mail body
+	 *
+	 * @access public
+	 * @param string $content Body of the e-mail
+	 * @return void
+	 * @since 1.5
+	 */
+	function setBody($content)
+	{
+		/*
+		 * Filter the Body
+		 * TODO: Check for XSS
+		 */
+		$this->Body = JMailHelper::cleanText( $content );
+	}
+
+	/**
+	 * Add recipients to the email
+	 *
+	 * @access public
+	 * @param mixed $recipient Either a string or array of strings [e-mail address(es)]
+	 * @return void
+	 * @since 1.5
+	 */
+	function addRecipient($recipient)
+	{
+		// If the recipient is an aray, add each recipient... otherwise just add the one
+		if (is_array($recipient))
+		{
+			foreach ($recipient as $to) {
+				$to = JMailHelper::cleanLine( $to );
+				$this->AddAddress($to);
+			}
+		} else {
+			$recipient = JMailHelper::cleanLine( $recipient );
+			$this->AddAddress($recipient);
+		}
+	}
+
+	/**
+	 * Add carbon copy recipients to the email
+	 *
+	 * @access public
+	 * @param mixed $cc Either a string or array of strings [e-mail address(es)]
+	 * @return void
+	 * @since 1.5
+	 */
+	function addCC($cc)
+	{
+		//If the carbon copy recipient is an aray, add each recipient... otherwise just add the one
+		if (isset ($cc))
+		{
+			if (is_array($cc)) {
+				foreach ($cc as $to) {
+					$to = JMailHelper::cleanLine( $to );
+					parent::AddCC($to);
+				}
+			} else {
+				$cc = JMailHelper::cleanLine( $cc );
+				parent::AddCC($cc);
+			}
+		}
+	}
+
+	/**
+	 * Add blind carbon copy recipients to the email
+	 *
+	 * @access public
+	 * @param mixed $cc Either a string or array of strings [e-mail address(es)]
+	 * @return void
+	 * @since 1.5
+	 */
+	function addBCC($bcc)
+	{
+		// If the blind carbon copy recipient is an aray, add each recipient... otherwise just add the one
+		if (isset ($bcc))
+		{
+			if (is_array($bcc)) {
+				foreach ($bcc as $to) {
+					$to = JMailHelper::cleanLine( $to );
+					parent::AddBCC($to);
+				}
+			} else {
+				$bcc = JMailHelper::cleanLine( $bcc );
+				parent::AddBCC($bcc);
+			}
+		}
+	}
+
+	/**
+	 * Add file attachments to the email
+	 *
+	 * @access public
+	 * @param mixed $attachment Either a string or array of strings [filenames]
+	 * @return void
+	 * @since 1.5
+	 */
+	function addAttachment($attachment)
+	{
+		// If the file attachments is an aray, add each file... otherwise just add the one
+		if (isset ($attachment))
+		{
+			if (is_array($attachment)) {
+				foreach ($attachment as $file) {
+					parent::AddAttachment($file);
+				}
+			} else {
+				parent::AddAttachment($attachment);
+			}
+		}
+	}
+
+	/**
+	 * Add Reply to e-mail address(es) to the e-mail
+	 *
+	 * @access public
+	 * @param array $reply Either an array or multi-array of form
+	 * 		<pre>
+	 * 			array( [0] => E-Mail Address [1] => Name )
+	 * 		</pre>
+	 * @return void
+	 * @since 1.5
+	 */
+	function addReplyTo($replyto)
+	{
+		// Take care of reply email addresses
+		if (is_array($replyto[0]))
+		{
+			foreach ($replyto as $to) {
+				$to0 = JMailHelper::cleanLine( $to[0] );
+				$to1 = JMailHelper::cleanLine( $to[1] );
+				parent::AddReplyTo($to0, $to1);
+			}
+		} else {
+			$replyto0 = JMailHelper::cleanLine( $replyto[0] );
+			$replyto1 = JMailHelper::cleanLine( $replyto[1] );
+			parent::AddReplyTo($replyto0, $replyto1);
+		}
+	}
+
+	/**
+	 * Use sendmail for sending the e-mail
+	 *
+	 * @access public
+	 * @param string $sendmail Path to sendmail [optional]
+	 * @return boolean True on success
+	 * @since 1.5
+	 */
+	function useSendmail($sendmail = null)
+	{
+		$this->Sendmail = $sendmail;
+
+		if (!empty ($this->Sendmail)) {
+			$this->IsSendmail();
+			return true;
+		} else {
+			$this->IsMail();
+			return false;
+		}
+	}
+
+	/**
+	 * Use SMTP for sending the e-mail
+	 *
+	 * @access public
+	 * @param string $auth SMTP Authentication [optional]
+	 * @param string $host SMTP Host [optional]
+	 * @param string $user SMTP Username [optional]
+	 * @param string $pass SMTP Password [optional]
+	 * @param string $secure SMTP Secure ssl,tls [optinal]
+	 * @param string $port SMTP Port [optional]
+	 * @return boolean True on success
+	 * @since 1.5
+	 */
+	function useSMTP($auth = null, $host = null, $user = null, $pass = null,$secure = null, $port = 25)
+	{
+		$this->SMTPAuth = $auth;
+		$this->Host 	= $host;
+		$this->Username = $user;
+		$this->Password = $pass;
+		$this->Port     = $port;
+		if ($secure == 'ssl' || $secure == 'tls') {
+			$this->SMTPSecure = $secure;
+		}
+
+		if ($this->SMTPAuth !== null && $this->Host !== null && $this->Username !== null && $this->Password !== null) {
+			$this->IsSMTP();
+		}
+	}
+}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 <?php
+/**
+ * @version		$Id: helper.php 14401 2010-01-26 14:10:00Z louis $
+ * @package		Joomla.Framework
+ * @subpackage	Mail
+ * @copyright	Copyright (C) 2005 - 2010 Open Source Matters. All rights reserved.
+ * @license		GNU/GPL, see LICENSE.php
+ * Joomla! is free software. This version may have been modified pursuant
+ * to the GNU General Public License, and as distributed it includes or
+ * is derivative of works licensed under the GNU General Public License or
+ * other free or open source software licenses.
+ * See COPYRIGHT.php for copyright notices and details.
+ */
+
+// Check to ensure this file is within the rest of the framework
+defined('JPATH_BASE') or die();
+
+/**
+ * E-Mail helper class, provides static methods to perform various tasks relevant
+ * to the Joomla e-mail routines.
+ *
+ * TODO: Test these methods as the regex work is first run and not tested thoroughly
+ *
+ * @static
+ * @package 	Joomla.Framework
+ * @subpackage	Mail
+ * @since		1.5
+ */
+class JMailHelper
+{
+	/**
+	 * Cleans single line inputs.
+	 *
+	 * @static
+	 * @param string $value String to be cleaned.
+	 * @return string Cleaned string.
+	 */
+	function cleanLine( $value ) {
+		return trim( preg_replace( '/(%0A|%0D|\n+|\r+)/i', '', $value ) );
+	}
+
+	/**
+	 * Cleans multi-line inputs.
+	 *
+	 * @static
+	 * @param string $value Multi-line string to be cleaned.
+	 * @return string Cleaned multi-line string.
+	 */
+	function cleanText( $value ) {
+		return trim( preg_replace( '/(%0A|%0D|\n+|\r+)(content-type:|to:|cc:|bcc:)/i', '', $value ) );
+	}
+
+	/**
+	 * Cleans any injected headers from the E-Mail body.
+	 *
+	 * @static
+	 * @param string $body E-Mail body string.
+	 * @return string Cleaned E-Mail body string.
+	 * @since 1.5
+	 */
+	function cleanBody($body) {
+		// Strip all E-Mail headers from a string
+		return preg_replace("/((From:|To:|Cc:|Bcc:|Subject:|Content-type:) ([\S]+))/", "", $body);
+	}
+
+	/**
+	 * Cleans any injected headers from the subject string.
+	 *
+	 * @static
+	 * @param string $subject E-Mail subject string.
+	 * @return string Cleaned E-Mail subject string.
+	 * @since 1.5
+	 */
+	function cleanSubject($subject) {
+		return preg_replace("/((From:|To:|Cc:|Bcc:|Content-type:) ([\S]+))/", "", $subject);
+	}
+
+	/**
+	 * Verifies that an e-mail address does not have any extra headers injected into it.
+	 *
+	 * @static
+	 * @param string $address E-Mail address.
+	 * @return string|false E-Mail address string or boolean false if injected headers are present.
+	 * @since 1.5
+	 */
+	function cleanAddress($address)
+	{
+		if (preg_match("[\s;,]", $address)) {
+			return false;
+		}
+		return $address;
+	}
+
+	/**
+	 * Verifies that the string is in a proper e-mail address format.
+	 *
+	 * @static
+	 * @param string $email String to be verified.
+	 * @return boolean True if string has the correct format; false otherwise.
+	 * @since 1.5
+	 */
+	function isEmailAddress($email)
+	{
+
+		// Split the email into a local and domain
+		$atIndex	= strrpos($email, "@");
+		$domain		= substr($email, $atIndex+1);
+		$local		= substr($email, 0, $atIndex);
+
+		// Check Length of domain
+		$domainLen	= strlen($domain);
+		if ($domainLen < 1 || $domainLen > 255) {
+			return false;
+		}
+
+		// Check the local address
+		// We're a bit more conservative about what constitutes a "legal" address, that is, A-Za-z0-9!#$%&\'*+/=?^_`{|}~-
+		$allowed	= 'A-Za-z0-9!#&*+=?_-';
+		$regex		= "/^[$allowed][\.$allowed]{0,63}$/";
+		if ( ! preg_match($regex, $local) ) {
+			return false;
+		}
+
+		// No problem if the domain looks like an IP address, ish
+		$regex		= '/^[0-9\.]+$/';
+		if ( preg_match($regex, $domain)) {
+			return true;
+		}
+
+		// Check Lengths
+		$localLen	= strlen($local);
+		if ($localLen < 1 || $localLen > 64) {
+			return false;
+		}
+
+		// Check the domain
+		$domain_array	= explode(".", rtrim( $domain, '.' ));
+		$regex		= '/^[A-Za-z0-9-]{0,63}$/';
+		foreach ($domain_array as $domain ) {
+
+			// Must be something
+			if ( ! $domain ) {
+				return false;
+			}
+
+			// Check for invalid characters
+			if ( ! preg_match($regex, $domain) ) {
+				return false;
+			}
+
+			// Check for a dash at the beginning of the domain
+			if ( strpos($domain, '-' ) === 0 ) {
+				return false;
+			}
+
+			// Check for a dash at the end of the domain
+			$length = strlen($domain) -1;
+			if ( strpos($domain, '-', $length ) === $length ) {
+				return false;
+			}
+
+		}
+
+		return true;
+	}
+
+}
+                                                                                                                                                                                                                                                                                           
