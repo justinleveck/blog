@@ -51,7 +51,7 @@ h6,
 .top-nav,
 .nav-bar,
 .sub-nav {
-  font-family: 'OpenSans', sans-serif;
+  font-family: 'Edmondsans-Bold', sans-serif;
 }
 .bottom-border {
   border-bottom: 4px solid #a2a2a2;
@@ -79,7 +79,7 @@ a.logo:hover {
   border-top: 4px solid #ededed;
 }
 .top-bar {
-  background: #2D2D2D;
+  background-color: #257287;
   margin-bottom: 40px;
 }
 .top-bar a {
@@ -89,6 +89,28 @@ a.logo:hover {
 .bio {
   float: right;
   width: 185px;
+}
+.bio p {
+  font-size: 14px !important;
+  text-align: center;
+}
+.avatar {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  margin-bottom: 15px;
+  box-shadow: 0px 0px 8px rgba(18,7,6,0.3)
+}
+.webicon {
+  -moz-box-shadow: 0 1px 0 rgba(0, 0, 0, 0.12) !important;
+  -webkit-box-shadow: 0 1px 0 rgba(0, 0, 0, 0.12) !important;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.12) !important;
+}
+.webicons {
+  text-align: center;
+}
+.webicons a {
+  margin-left: 3px;
 }
 .title-area .row {
   height: 45px;
@@ -105,12 +127,6 @@ a.logo:hover {
 .top-bar .top-bar-section .right  {
   margin-right: 15px;
 }
-/*div.panel {
-  background: #efefef;
-  background: -moz-linear-gradient(top, #e5e5e5 0%, #dedede 100%);
-  background: -webkit-gradient(linear, left top, left bottom, color-stop(0%, #e5e5e5), color-stop(100%, #dedede));
-  background: -o-linear-gradient(top, #e5e5e5 0%, #dedede 100%);
-}*/
 .blue.button {
   background-color: #2f84c2;
 }
@@ -272,7 +288,7 @@ div.alert-box {
   color: #888888;
 }
 .post-title {
-  font-size: 2.2em !important;
+  font-size: 2.9em !important;
   margin: 0 0 2.1rem 0;
 }
 .post-title a {
@@ -298,8 +314,7 @@ footer.row {
   padding: 4em 0px;
 }
 #copyright {
-  background: #3f3f3f;
-  color: #fff;
+  background: #F2F2F2;
   padding: 11px 0;
   position: absolute;
   width: 100%; }
@@ -317,4 +332,7 @@ footer.row {
 }
 html, body {
   height: 100%;
+}
+.highlight pre {
+  font-size: 18px;
 }

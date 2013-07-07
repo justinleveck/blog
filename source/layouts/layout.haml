@@ -11,7 +11,7 @@
     %meta{content: "width=device-width, initial-scale=1.0", name: "viewport"}
     %title= data.page.title
     / Included CSS Files
-    = stylesheet_link_tag "app", "theme", "ghfm", "fonts"
+    = stylesheet_link_tag "app", "theme", "ghfm", "fonts", "github", "webicons"
     = javascript_include_tag "foundation/modernizr.foundation"
     %link{rel: "alternate", type: "application/rss+xml", title: "RSS Feed", href: "feed.xml"}
   %body{class: page_classes}
@@ -24,51 +24,26 @@
         %section.top-bar-section
           <!--Right Nav Section -->
           %ul.right
-            %li
-              %a{href: "/"} Blog
-            %li
-              = link_to 'About', '/about.html'
+            / %li
+            /   %a{href: "/"} Blog
+            / %li
+            /   = link_to 'About', '/about.html'
 
 
     .row.wrapper
-      .eight.columns
+      .nine.columns
         = yield
       / Application Javascript, safe to override
       = javascript_include_tag "app"
-      %aside.four.columns
-        .panel.avatar
-          = image_tag 'http://www.gravatar.com/avatar/f170caf69a98078819d91ddf2f17f2f9.jpg?s=64'
-          %span.bio
-            Ruby developer. Entrepreneur.
-        - if request.path == "index.html"
-          .panel
-            - if paginate
-              %p
-                Page
-                = page_number
-                of
-                = num_pages
-        %dl.tabs
-          %dd.active
-            %a{href: "#recent"} Recent Articles
-          %dd
-            %a{href: "#tags"} Tags
-        %ul.tabs-content
-          %li#recentTab.active
-            %h4 Recent Articles
-            %ul.disc
-              - blog.articles[0...10].each do |article|
-                %li
-                  %a{href: "#{article.url}"}
-                    = article.title
-                  -#%span= article.date.strftime('%b %e')
-          %li#tagsTab
-            %h4 Tags
-            %ul.disc
-              - blog.tags.each do |tag, articles|
-                %li
-                  %a{href: "#{tag_path tag}"}
-                    = "#{tag} (#{articles.size})"
+      .three.columns.bio
+        %div.panel
+          =image_tag 'me.jpg', class: 'avatar'
+          %p
+            My name is Justin. I am a Ruby Developer living in Orange County, CA.
+          %div.webicons
+            %a{href: 'https://twitter.com/justinleveck', class: 'webicon twitter medium', target: 'new'}
+            %a{href: 'https://github.com/justinleveck', class: 'webicon github medium', target: 'new'}
+
   %div#copyright
     %div.row.full-width
       %div.large-4.columns
