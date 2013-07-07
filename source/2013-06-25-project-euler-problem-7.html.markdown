@@ -9,7 +9,7 @@ I recently applied to [gSchool](http://www.gschool.it/). The code I submitted wa
 > By listing the first six prime numbers: 2, 3, 5, 7, 11, and 13, we can see that the 6th prime is 13. 
 > What is the 10,001st prime number?
 
-This was a fun problem to work on. Initially the method I wrote to test if a number (x) is prime involved testing each number that made up x. It resembled something like this:
+This was a fun problem to work on. Initially the method I wrote to test if a number is prime involved testing each number that made up x. It resembled something like this:
 
 ```ruby
 def prime? number
