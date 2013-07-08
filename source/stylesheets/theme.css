@@ -103,6 +103,8 @@ a.logo:hover {
 }
 .top-bar ul > li a:not(.button) {
   color: black !important;
+  height: 52px;
+  line-height: 52px;
 }
 .bio {
   float: right;
