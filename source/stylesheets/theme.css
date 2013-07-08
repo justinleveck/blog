@@ -53,6 +53,10 @@ h6,
 .sub-nav {
   font-family: 'Edmondsans-Bold', sans-serif;
 }
+.row {
+  margin-left: 0;
+  margin-right: 0;
+}
 .bottom-border {
   border-bottom: 4px solid #a2a2a2;
 }
@@ -79,12 +83,26 @@ a.logo:hover {
   border-top: 4px solid #ededed;
 }
 .top-bar {
-  background-color: #257287;
+  background-color: #FFFFFF;
+  box-shadow:0 0 4px rgba(0,0,0,0.25);
+  -webkit-transition:background .5s ease-in-out 0;
+  -moz-transition:background .5s ease-in-out 0;
+  -o-transition:background .5s ease-in-out 0;
+  transition:background .5s ease-in-out 0;
+  height: 52px;
   margin-bottom: 40px;
+}
+.top-bar ul {
+  float: left;
+  height: 52px;
+  margin: 0 0 0 4%;
 }
 .top-bar a {
   font-family: Istok, 'Helvetica Neue', Helvetica, 'Droid Sans', Arial, sans-serif !important;
   font-size: 16px !important;
+}
+.top-bar ul > li a:not(.button) {
+  color: black !important;
 }
 .bio {
   float: right;
@@ -126,6 +144,10 @@ a.logo:hover {
 }
 .top-bar .top-bar-section .right  {
   margin-right: 15px;
+}
+.wrapper {
+  margin-left: auto;
+  margin-right: auto;
 }
 .blue.button {
   background-color: #2f84c2;
@@ -309,9 +331,12 @@ border-top: 1px solid #E7E7E8;
   float: right;
 }
 footer.row {
-  margin-top: 7em;
   border-top: solid 1px #DDD;
+  margin-top: 7em;
+  margin-left: auto;
+  margin-right: auto;
   padding: 4em 0px;
+  text-align: center;
 }
 #copyright {
   background: #F2F2F2;
@@ -326,6 +351,7 @@ footer.row {
     margin-bottom: 0; }
 #copyright .large-4.columns {
   font-size: .8em;
+  margin: 0 0 0 4%;
 }
 .about #copyright {
   bottom: 0;
