@@ -95,7 +95,6 @@ a.logo:hover {
 .top-bar ul {
   float: left;
   height: 52px;
-  margin: 0 0 0 4%;
 }
 .top-bar a {
   font-family: Istok, 'Helvetica Neue', Helvetica, 'Droid Sans', Arial, sans-serif !important;
@@ -353,7 +352,6 @@ footer.row {
     margin-bottom: 0; }
 #copyright .large-4.columns {
   font-size: .8em;
-  margin: 0 0 0 4%;
 }
 .about #copyright {
   bottom: 0;
