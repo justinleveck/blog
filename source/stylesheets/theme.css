@@ -352,6 +352,7 @@ footer.row {
     margin-bottom: 0; }
 #copyright .large-4.columns {
   font-size: .8em;
+  margin-left: 10px;
 }
 .about #copyright {
   bottom: 0;
